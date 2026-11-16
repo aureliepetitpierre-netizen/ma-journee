@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma journée</title>
+<meta name="theme-color" content="#FBF8F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1B1916" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="eyebrow" id="dayname"></div>
+      <h1>Ma journée</h1>
+      <div class="sync"><span class="g off" id="syncdot"></span><span id="synctxt">Google Agenda non connecté</span><button id="syncbtn">Connecter</button></div>
+    </div>
+    <button class="iconbtn" id="settingsbtn" aria-label="Réglages"><svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+  </header>
+  <div class="allday" id="allday"></div>
+
+  <div class="modes" role="group" aria-label="Type de journée">
+    <button data-mode="pleine">Journée pleine</button>
+    <button data-mode="rdv">Avec rendez-vous</button>
+    <button data-mode="low">Sans énergie</button>
+  </div>
+
+  <div class="summary">
+    <div class="row"><span>Reste à faire</span><b id="remain">—</b></div>
+    <div class="row"><span>Si je commence maintenant, fin vers</span><b id="eta">—</b></div>
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <div id="banner"></div>
+
+  <div class="legend">
+    <span><i style="background:var(--pilier)"></i>Pilier : on garde, on raccourcit</span>
+    <span><i style="background:var(--important)"></i>Important : on déplace</span>
+    <span><i style="background:var(--bonus)"></i>Bonus : on saute</span>
+    <span><i style="background:var(--gcal)"></i>Agenda</span>
+  </div>
+
+  <div class="tl" id="tl"></div>
+  <div class="hidden-evs" id="hidden"></div>
+
+  <div class="rule"><b>Quand un rendez-vous arrive :</b> on enlève d'abord les bonus, on déplace les importants, et on ne touche aux piliers que pour les raccourcir. Le chrono démarre quand je commence.</div>
+</div>
+
+<button class="fab" id="fab"><span>+</span>Ajouter un bloc</button>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="focus" id="focus" hidden role="dialog" aria-label="Mode focus">
+  <div><div class="cat" id="fcat"></div><h2 id="ftitle"></h2><div class="sub" id="fmin"></div></div>
+  <div class="ring">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="45" fill="none" stroke="var(--focus-line)" stroke-width="3"/><circle id="farc" cx="50" cy="50" r="45" fill="none" stroke="var(--c)" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>
+    <div class="num"><div><div id="fnum">0:00</div><div class="sub" id="fsub">restantes</div></div></div>
+  </div>
+  <div class="ctl"><button id="fpause">Pause</button><button id="fplus">+5 min</button><button class="main" id="fdone">Terminé</button></div>
+  <button class="fexit" id="fexit">Quitter le mode focus</button>
+</div>
+
+<div class="sheet-bg" id="sheetbg" hidden></div>
+<div class="sheet" id="addsheet" hidden><div class="sheet-in"><div class="grab"></div><h2>Ajouter un bloc</h2><div id="tpls"></div></div></div>
+<div class="sheet" id="setsheet" hidden><div class="sheet-in"><div class="grab"></div><h2>Réglages</h2>
+  <h3>Google Agenda</h3>
+  <p id="gstatus"></p>
+  <div><button class="btn primary" id="gconnect">Connecter Google Agenda</button><button class="btn" id="gdisconnect" hidden>Déconnecter</button></div>
+  <h3>Notifications</h3>
+  <p id="nstatus"></p>
+  <div><button class="btn" id="nbtn">Activer les notifications</button><button class="btn" id="ntest">Tester</button></div>
+  <h3>Appli</h3>
+  <p>Pour l'avoir sur l'écran d'accueil : menu ⋮ de Chrome, puis « Installer l'application ».</p>
+  <div><button class="btn primary" id="installbtn" hidden>Installer sur l'écran d'accueil</button><button class="btn" id="resetbtn">Recommencer la journée</button></div>
+</div></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
