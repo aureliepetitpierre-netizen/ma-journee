@@ -60,7 +60,7 @@ function makeBlock(k,dur){
 }
 function freshBlocks(mode){return MODES[mode].map(([k,d])=>makeBlock(k,d))}
 function newDay(){
-  S={date:todayKey(),mode:"pleine",items:freshBlocks("pleine"),open:null,running:null,ruleApplied:false,lastSync:null,allDay:[]};
+  S={date:todayKey(),mode:"pleine",items:freshBlocks("pleine"),open:null,running:null,ruleApplied:false,lastSync:null,allDay:[],startedAt:null};
 }
 function load(){
   S=lsGet(KEY,null);
@@ -99,6 +99,13 @@ function insertEvent(items,ev){
     }
   }
   items.splice(pos,0,ev);
+}
+
+// Replace les rendez-vous selon l'heure actuelle (sauf ceux déplacés à la main)
+function reflowEvents(){
+  const evs=S.items.filter(x=>x.kind==="event"&&!x.pinned);
+  S.items=S.items.filter(x=>!(x.kind==="event"&&!x.pinned));
+  evs.sort((a,b)=>a.startMin-b.startMin).forEach(ev=>insertEvent(S.items,ev));
 }
 
 // ---------- Rendu ----------
@@ -167,6 +174,9 @@ function render(){
   const left=bl.reduce((a,b)=>a+remaining(b),0);
   const evLeft=S.items.filter(i=>i.kind==="event"&&!i.ghost&&!i.removed&&i.endMin>now)
     .reduce((a,e)=>a+(e.endMin-Math.max(e.startMin,now)),0);
+  $("startrow").innerHTML=S.startedAt
+    ?`<div class="row"><span>Journée commencée à ${new Date(S.startedAt).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"})}</span>${S.items.some(x=>x.kind==="event")?`<button class="link" data-act="reflow">Replacer mes RDV</button>`:""}</div>`
+    :`<button class="startbtn" data-act="start">${ICON.play}Commencer ma journée</button>`;
   $("remain").textContent=fmt(left)+` · ${bl.filter(b=>b.done).length}/${bl.length} faits`;
   const end=new Date(Date.now()+(left+evLeft)*60000);
   $("eta").textContent=end.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"});
@@ -198,8 +208,19 @@ function act(a,id,v){
     case"dur":it.dur=Math.max(5,it.dur+ +v);it.isMin=TPL[it.tpl].min===it.dur;it.alerted=false;break;
     case"min":{const t=TPL[it.tpl];it.alerted=false;
       if(it.isMin){it.dur=it.prev||t.d;it.isMin=false}else{it.prev=it.dur;it.dur=t.min;it.isMin=true}break}
-    case"up":if(i>0)[S.items[i-1],S.items[i]]=[S.items[i],S.items[i-1]];break;
-    case"down":if(i>=0&&i<S.items.length-1)[S.items[i+1],S.items[i]]=[S.items[i],S.items[i+1]];break;
+    case"up":if(it.kind==="event")it.pinned=true;if(i>0)[S.items[i-1],S.items[i]]=[S.items[i],S.items[i-1]];break;
+    case"down":if(it.kind==="event")it.pinned=true;if(i>=0&&i<S.items.length-1)[S.items[i+1],S.items[i]]=[S.items[i],S.items[i+1]];break;
+    case"start":{
+      S.startedAt=Date.now();
+      S.items.forEach(x=>{if(x.kind==="event")x.pinned=false});
+      reflowEvents();
+      const first=S.items.find(x=>x.kind==="block"&&!x.done);
+      if(first){unlockAudio();startRun(first.id)}
+      toast("C'est parti ! Tes rendez-vous sont placés à partir de maintenant.");
+      break}
+    case"reflow":
+      S.items.forEach(x=>{if(x.kind==="event")x.pinned=false});
+      reflowEvents();toast("Rendez-vous replacés selon l'heure actuelle.");break;
     case"del":if(S.running?.id===id)S.running=null;S.items.splice(i,1);S.open=null;break;
     case"rm":it.removed=true;S.open=null;break;
     case"restore":S.items.forEach(x=>{if(x.kind==="event")x.removed=false});break;
@@ -395,6 +416,7 @@ async function sync(){
       }
     }));
     merge(evs);S.allDay=allDay;S.lastSync=Date.now();
+    if(!S.startedAt)reflowEvents(); // journée pas encore commencée : les RDV suivent l'heure actuelle
   }catch(e){
     syncErr=e.message==="auth"?"Session Google expirée":"Synchronisation impossible";
   }finally{syncing=false;render()}
@@ -476,6 +498,7 @@ setInterval(()=>{if(tokenValid())sync()},15*60000);
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState!=="visible")return;
   if(focusId)keepAwake();
+  if(!S.startedAt)reflowEvents();
   tick();render();
   if(tokenValid()&&(!S.lastSync||Date.now()-S.lastSync>5*60000))sync();
 });
