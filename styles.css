@@ -114,6 +114,13 @@ header h1{font-family:var(--display);font-weight:600;font-size:30px;margin:4px 0
 .sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
 .sheet .btn{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 14px;font-size:14px;margin:0 6px 6px 0}
 .sheet .btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.cals{margin:0 0 12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cals .lbl{font-size:12px;color:var(--muted);padding:8px 12px;background:var(--soft)}
+.cals label{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}
+.cals label .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+.cals label .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cals label.off .nm{color:var(--muted);text-decoration:line-through}
+.cals input{width:20px;height:20px;accent-color:var(--gcal);margin:0;flex:0 0 auto}
 .tpl{display:flex;align-items:center;gap:10px;width:100%;border:0;border-bottom:1px solid var(--line);background:none;padding:11px 2px;text-align:left}
 .tpl i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:0 0 auto}
 .tpl .n{flex:1;min-width:0}

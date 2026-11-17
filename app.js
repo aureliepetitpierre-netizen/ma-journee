@@ -376,7 +376,11 @@ async function sync(){
   syncing=true;syncErr="";renderSync();
   try{
     const d=new Date(),start=new Date(d.getFullYear(),d.getMonth(),d.getDate()),end=new Date(start.getFullYear(),start.getMonth(),start.getDate()+1);
-    const cals=((await gget("https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader")).items||[]).filter(c=>c.selected&&!c.hidden);
+    const all=((await gget("https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader")).items||[]).filter(c=>c.selected&&!c.hidden);
+    lsSet("gcals",all.map(c=>({id:c.id,name:c.summaryOverride||c.summary||c.id,color:c.backgroundColor||"",primary:!!c.primary})).sort((a,b)=>(b.primary-a.primary)||a.name.localeCompare(b.name,"fr")));
+    const excluded=new Set(lsGet("gcalsOff",[]));
+    const cals=all.filter(c=>!excluded.has(c.id));
+    if(!$("setsheet").hidden)renderSettings();
     const evs=[],allDay=[];
     await Promise.all(cals.map(async c=>{
       const q=new URLSearchParams({timeMin:start.toISOString(),timeMax:end.toISOString(),singleEvents:"true",orderBy:"startTime",maxResults:"100"});
@@ -424,6 +428,10 @@ function renderSettings(){
   if(!CFG.GOOGLE_CLIENT_ID){g.textContent="Il manque l'identifiant Google dans config.js. Suis le guide README.md, étape 2.";$("gconnect").hidden=true;$("gdisconnect").hidden=true}
   else if(connected()){g.textContent="Connecté. Seule la lecture de l'agenda est demandée : l'appli ne modifie jamais ton agenda.";$("gconnect").hidden=false;$("gconnect").textContent="Synchroniser maintenant";$("gdisconnect").hidden=false}
   else{g.textContent="Connecte ton compte pour voir les événements du jour dans la timeline.";$("gconnect").hidden=false;$("gconnect").textContent="Connecter Google Agenda";$("gdisconnect").hidden=true}
+  const list=lsGet("gcals",[]),off=new Set(lsGet("gcalsOff",[]));
+  $("gcals").hidden=!(connected()&&list.length);
+  $("gcals").innerHTML=`<div class="lbl">Agendas affichés dans la timeline</div>`+list.map(c=>
+    `<label class="${off.has(c.id)?"off":""}"><span class="sw" style="background:${/^#[0-9a-f]{3,8}$/i.test(c.color)?c.color:"var(--gcal)"}"></span><span class="nm">${esc(c.name)}${c.primary?" (principal)":""}</span><input type="checkbox" data-cal="${esc(c.id)}" ${off.has(c.id)?"":"checked"}></label>`).join("");
   const n=$("nstatus");
   if(!("Notification" in window)){n.textContent="Ce navigateur ne gère pas les notifications.";$("nbtn").hidden=true}
   else if(Notification.permission==="granted"){n.textContent="Activées. Une notification arrive à la fin du chrono si l'appli est en arrière-plan.";$("nbtn").hidden=true}
@@ -431,6 +439,16 @@ function renderSettings(){
   else{n.textContent="Pour être prévenue quand le temps d'un bloc est écoulé.";$("nbtn").hidden=false}
 }
 $("gconnect").addEventListener("click",()=>{closeSheets();syncNow()});
+$("gcals").addEventListener("change",e=>{
+  const id=e.target.dataset.cal;if(id==null)return;
+  const off=new Set(lsGet("gcalsOff",[]));
+  if(e.target.checked)off.delete(id);else off.add(id);
+  lsSet("gcalsOff",[...off]);
+  e.target.closest("label").classList.toggle("off",!e.target.checked);
+  // retire tout de suite les événements de cet agenda, puis resynchronise
+  if(!e.target.checked){S.items=S.items.filter(x=>!(x.kind==="event"&&x.gid.startsWith(id+"|")));render()}
+  if(tokenValid())sync();else toast("Touche « Actualiser » pour mettre à jour l'agenda.");
+});
 $("gdisconnect").addEventListener("click",disconnect);
 $("nbtn").addEventListener("click",async()=>{try{await Notification.requestPermission()}catch(e){}renderSettings()});
 $("ntest").addEventListener("click",async()=>{unlockAudio();ding();try{navigator.vibrate?.([300,150,300])}catch(e){}
