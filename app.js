@@ -429,8 +429,11 @@ function renderSettings(){
   else if(connected()){g.textContent="Connecté. Seule la lecture de l'agenda est demandée : l'appli ne modifie jamais ton agenda.";$("gconnect").hidden=false;$("gconnect").textContent="Synchroniser maintenant";$("gdisconnect").hidden=false}
   else{g.textContent="Connecte ton compte pour voir les événements du jour dans la timeline.";$("gconnect").hidden=false;$("gconnect").textContent="Connecter Google Agenda";$("gdisconnect").hidden=true}
   const list=lsGet("gcals",[]),off=new Set(lsGet("gcalsOff",[]));
-  $("gcals").hidden=!(connected()&&list.length);
-  $("gcals").innerHTML=`<div class="lbl">Agendas affichés dans la timeline</div>`+list.map(c=>
+  $("gcals").hidden=!connected();
+  if(connected()&&!list.length){
+    $("gcals").innerHTML=`<div class="lbl">Agendas affichés dans la timeline</div><label>La liste de tes agendas se charge à la prochaine synchronisation. Touche « Synchroniser maintenant ».</label>`;
+    if(tokenValid()&&!syncing)sync();
+  } else $("gcals").innerHTML=`<div class="lbl">Agendas affichés dans la timeline</div>`+list.map(c=>
     `<label class="${off.has(c.id)?"off":""}"><span class="sw" style="background:${/^#[0-9a-f]{3,8}$/i.test(c.color)?c.color:"var(--gcal)"}"></span><span class="nm">${esc(c.name)}${c.primary?" (principal)":""}</span><input type="checkbox" data-cal="${esc(c.id)}" ${off.has(c.id)?"":"checked"}></label>`).join("");
   const n=$("nstatus");
   if(!("Notification" in window)){n.textContent="Ce navigateur ne gère pas les notifications.";$("nbtn").hidden=true}
@@ -485,4 +488,9 @@ if(S.running){const b=find(S.running.id);if(b&&elapsedOf(b)>=b.dur*60&&!b.alerte
 render();
 if(tokenValid())sync();
 window.addEventListener("load",()=>{initGIS()});
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
+  // une nouvelle version vient d'être installée : on recharge une fois pour l'utiliser
+  let reloaded=false;const hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!hadController||reloaded||focusId)return;reloaded=true;location.reload()});
+}

@@ -1,5 +1,5 @@
 // Service worker : garde l'appli disponible hors ligne et affiche les notifications.
-const CACHE = "ma-journee-v1";
+const CACHE = "ma-journee-v3";
 const SHELL = ["./", "index.html", "styles.css", "app.js", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -15,7 +15,8 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
   e.respondWith(
-    fetch(e.request).then(r => {
+    // no-cache : toujours demander au serveur s'il y a une nouvelle version
+    fetch(e.request, { cache: "no-cache" }).then(r => {
       if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return r;
     }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("index.html")))
